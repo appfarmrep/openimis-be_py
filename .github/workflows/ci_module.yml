@@ -164,7 +164,7 @@ jobs:
         run: |
           export DB_NAME_TEST="test_$DB_NAME"
           
-          if [ ${GITHUB_REF##*/} = "main" ]; then export DBBRANCH="main"; else export DBBRANCH="develop"; fi
+          if [ ${GITHUB_REF##*/} = "develop" ]; then export DBBRANCH="main"; else export DBBRANCH="develop"; fi
           echo "Branch ${GITHUB_REF##*/}, usign ${DBBRANCH} branch for database"
           git clone --depth=1 --branch=$DBBRANCH https://github.com/openimis/database_ms_sqlserver.git ./sql_mssql
           cd sql_mssql/ && bash concatenate_files.sh && cd ..
@@ -203,7 +203,8 @@ jobs:
         run: |
           python -V
           export MODULES=$(jq -r '(.modules[].name)' ../openimis.json | xargs)
-          MODULES=$(echo "$MODULES" | sed -E "s/\b$(echo "${CI_EXCLUDED_MODULE// /\\b|\\b}")\b/ /g" | xargs)
+          # Remove api_fhir_r4 from MODULES
+          MODULES=$(echo "$MODULES" | sed 's/api_fhir_r4//g' | xargs)
           echo $MODULES
           python manage.py test --debug-mode --timing --keepdb $MODULES
         env:
@@ -219,7 +220,6 @@ jobs:
           #DEV_SERVER: true
           SITE_ROOT: api
           #REMOTE_USER_AUTHENTICATION: False
-          CI_EXCLUDED_MODULE: ${{ vars.CI_EXCLUDED_MODULE }}
   ci_module_psql_test:
     name: Run All Tests (PSQL)
     runs-on: ubuntu-20.04
@@ -271,7 +271,7 @@ jobs:
         run: |
           export DB_NAME_TEST="test_$DB_NAME"
           
-          if [ ${GITHUB_REF##*/} = "main" ]; then export DBBRANCH="main"; else export DBBRANCH="develop"; fi
+          if [ ${GITHUB_REF##*/} = "develop" ]; then export DBBRANCH="main"; else export DBBRANCH="develop"; fi
           echo "Branch ${GITHUB_REF##*/}, usign ${DBBRANCH} branch for database"
           git clone  --depth=1 --branch=$DBBRANCH https://github.com/openimis/database_postgresql.git ./sql_psql
           
@@ -300,8 +300,8 @@ jobs:
           python -V
           export MODULES=$(jq -r '(.modules[].name)' ../openimis.json | xargs)
 
-          # Remove some module from MODULES
-          MODULES=$(echo "$MODULES" | sed -E "s/\b$(echo "${CI_EXCLUDED_MODULE// /\\b|\\b}")\b/ /g" | xargs)
+          # Remove api_fhir_r4 from MODULES
+          MODULES=$(echo "$MODULES" | sed 's/api_fhir_r4//g' | xargs)
           echo $MODULES
           # Generate sonar report 
           export MODULE_NAME="$(echo $GITHUB_REPOSITORY | sed 's#^openimis/openimis-be-\(.*\)_py$#\1#')"
@@ -320,7 +320,6 @@ jobs:
           DB_PASSWORD: GitHub999
           #DEV_SERVER: true
           SITE_ROOT: api
-          CI_EXCLUDED_MODULE: ${{ vars.CI_EXCLUDED_MODULE }}
       - name: Generate Coverage Report
         if: always()
         working-directory: ./openimis/openIMIS
